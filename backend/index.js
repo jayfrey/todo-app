@@ -2,33 +2,72 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const path = require('path');
+const sqlite3 = require('sqlite3').verbose();
 
-console.log('dirname: '+__dirname);
+let db = new sqlite3.Database(':memory:', (err) => {
+    if (err) throw err;
+    console.log('Connected to the in-memory database.');
+});
 
 // Have Node serve the files for our built React app
 app.use(express.static(path.resolve(__dirname, '../frontend/build')));
-
-app.get('/api', (req, res) => {
-    res.json({ message: 'Hello from server!'});
-});
-
-//app.post('/', function (req, res) {
-//    res.send('Got a POST request')
-//})
-//
-//app.put('/user', function (req, res) {
-//    res.send('Got a PUT request at /user')
-//})
-//
-//app.delete('/user', function (req, res) {
-//    res.send('Got a DELETE request at /user')
-//})
-
 
 // All other GET requests not handled before will return our React app
 app.get('*', (req, res) => {
     res.sendFile(path.resolve(__dirname, '../frontend/build', 'index.html'));
 });
+
+db.serialize(() => {
+
+    let createSql = 'CREATE TABLE projects (' +
+                    '[id] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,' +
+                    '[name] NVARCHAR(100),' +
+                    '[status] NVARCHAR(100))';
+
+    let insertSql = 'INSERT INTO projects (name, status) VALUES' +
+                    "('Web App', 'to_do')," +
+                    "('Mobile App', 'in_progress')," +
+                    "('ML App', 'done')";
+
+    let selectSql = 'SELECT * FROM projects';
+
+    db.run(createSql);
+    db.run(insertSql);
+    db.each(selectSql, (err, row) => {
+        if (err) throw err;
+        console.log(row);
+    });
+});
+
+app.get('/api/project/all', (req, res) => {
+    
+    let sql = 'SELECT * FROM projects';
+
+    db.all(sql, (err, rows) => {
+        if (err) throw err;
+        res.send(rows);
+    });
+});
+
+app.post('/api/project/add', (req, res) => {
+
+    let sql = 'INSERT INTO projects (name, status) VALUES (?, ?)';
+
+    db.run(sql, ['New App', 'to_do'], (err) => {
+        if (err) throw err;
+        res.send('Insert success');
+    });
+})
+
+app.put('/api/project/update', (req, res) => {
+
+    let sql = 'UPDATE projects SET status = ? WHERE id = ?';
+
+    db.run(sql, ['done', 1], (err) => {
+        if (err) throw err;
+        res.send('Update success');
+    });
+})
 
 app.listen(PORT, () => {
     console.log(`Server listening on ${PORT}`);
