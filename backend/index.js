@@ -4,6 +4,11 @@ const PORT = process.env.PORT || 3001;
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 
+// Pass incoming request params to body
+var bodyParser = require("body-parser");
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+
 let db = new sqlite3.Database(':memory:', (err) => {
     if (err) throw err;
     console.log('Connected to the in-memory database.');
@@ -12,10 +17,6 @@ let db = new sqlite3.Database(':memory:', (err) => {
 // Have Node serve the files for our built React app
 app.use(express.static(path.resolve(__dirname, '../frontend/build')));
 
-// All other GET requests not handled before will return our React app
-app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../frontend/build', 'index.html'));
-});
 
 db.serialize(() => {
 
@@ -51,9 +52,16 @@ app.get('/api/project/all', (req, res) => {
 
 app.post('/api/project/add', (req, res) => {
 
+    console.log(req.body);
+    
+    var data = [
+        req.body.name,
+        req.body.status,
+    ];
+    
     let sql = 'INSERT INTO projects (name, status) VALUES (?, ?)';
 
-    db.run(sql, ['New App', 'to_do'], (err) => {
+    db.run(sql, data, (err) => {
         if (err) throw err;
         res.send('Insert success');
     });
@@ -61,13 +69,27 @@ app.post('/api/project/add', (req, res) => {
 
 app.put('/api/project/update', (req, res) => {
 
+    console.log(req.body);
+
+    var data = [
+        req.body.status,
+        req.body.id,
+    ];
+
     let sql = 'UPDATE projects SET status = ? WHERE id = ?';
 
-    db.run(sql, ['done', 1], (err) => {
+    db.run(sql, data, (err) => {
         if (err) throw err;
         res.send('Update success');
     });
 })
+
+
+
+// All other GET requests not handled before will return our React app
+app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../frontend/build', 'index.html'));
+});
 
 app.listen(PORT, () => {
     console.log(`Server listening on ${PORT}`);
