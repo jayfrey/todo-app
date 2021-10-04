@@ -40,6 +40,20 @@ db.serialize(() => {
     });
 });
 
+app.post('/api/project/get-by-status', (req, res) => {
+
+    var data = [
+        req.body.status,
+    ];
+    
+    let sql = 'SELECT * FROM projects WHERE status = ?';
+
+    db.all(sql, data, (err, rows) => {
+        if (err) throw err;
+        res.send(rows);
+    });
+});
+
 app.get('/api/project/all', (req, res) => {
     
     let sql = 'SELECT * FROM projects';
