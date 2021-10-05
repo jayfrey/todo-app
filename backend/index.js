@@ -23,17 +23,26 @@ db.serialize(() => {
     let createSql = 'CREATE TABLE projects (' +
                     '[id] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,' +
                     '[name] NVARCHAR(100),' +
-                    '[status] NVARCHAR(100))';
+                    '[status] NVARCHAR(100),' +
+                    '[position] INTEGER)';
 
-    let insertSql = 'INSERT INTO projects (name, status) VALUES' +
-                    "('Web App', 'to_do')," +
-                    "('Mobile App', 'in_progress')," +
-                    "('ML App', 'done')";
+    let insertSql = "INSERT INTO projects (name, status, position) VALUES" +
+                    "('Web App', 'to_do', 0)," +
+                    // "('Web App', 'to_do', 3)," +
+                    // "('Web App', 'to_do', 29)," +
+                    // "('Mobile App', 'in_progress', 0)," +
+                    "('ML App', 'done', 0)";
 
     let selectSql = 'SELECT * FROM projects';
 
-    db.run(createSql);
-    db.run(insertSql);
+    db.run(createSql, (err, row) => {
+        if (err) throw err;
+        console.log(row);
+    });
+    db.run(insertSql, (err, row) => {
+        if (err) throw err;
+        console.log(row);
+    });
     db.each(selectSql, (err, row) => {
         if (err) throw err;
         console.log(row);
@@ -46,7 +55,7 @@ app.post('/api/project/get-by-status', (req, res) => {
         req.body.status,
     ];
     
-    let sql = 'SELECT * FROM projects WHERE status = ?';
+    let sql = 'SELECT * FROM projects WHERE status = ? ORDER BY position ASC';
 
     db.all(sql, data, (err, rows) => {
         if (err) throw err;
@@ -72,19 +81,24 @@ app.get('/api/project/all', (req, res) => {
 });
 
 app.post('/api/project/add', (req, res) => {
-
     console.log(req.body);
+    let queryLastOrderSql = "SELECT MAX(position) as position FROM projects WHERE status = 'to_do'";
     
-    var data = [
-        req.body.name,
-        req.body.status,
-    ];
-    
-    let sql = 'INSERT INTO projects (name, status) VALUES (?, ?)';
-
-    db.run(sql, data, (err) => {
+    db.get(queryLastOrderSql, (err, row) => {
         if (err) throw err;
-        res.send('Insert success');
+
+        var data = [
+            req.body.name,
+            req.body.status,
+            row.position+1,
+        ];
+        
+        let sql = "INSERT INTO projects (name, status, position) VALUES (?, ?, ?)";
+
+        db.run(sql, data, (err) => {
+            if (err) throw err;
+            res.send('Insert success');
+        });
     });
 })
 
@@ -94,10 +108,11 @@ app.put('/api/project/update', (req, res) => {
 
     var data = [
         req.body.status,
+        req.body.position,
         req.body.id,
     ];
 
-    let sql = 'UPDATE projects SET status = ? WHERE id = ?';
+    let sql = 'UPDATE projects SET status = ?, position = ? WHERE id = ?';
 
     db.run(sql, data, (err) => {
         if (err) throw err;

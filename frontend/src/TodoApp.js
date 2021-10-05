@@ -1,16 +1,17 @@
 import React from "react";
 import axios from 'axios';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
-const status = {
-  'toDoList' : 'to_do',
-  'inProgressList' : 'in_progress',
-  'doneList' : 'done'
+const list = {
+  'to_do' : 'toDoList',
+  'in_progress' : 'inProgressList',
+  'done' : 'doneList'
 };
 
 const count = {
-  'toDoList' : 'toDoCount',
-  'inProgressList' : 'inProgressCount',
-  'doneList' : 'doneCount'
+  'to_do' : 'toDoCount',
+  'in_progress' : 'inProgressCount',
+  'done' : 'doneCount'
 };
 
 class TodoApp extends React.Component {
@@ -37,33 +38,47 @@ class TodoApp extends React.Component {
 
   fetchProjects = async () => {
 
-    Object.keys(status).map( (key, index) => {
-      console.log(key);
-      console.log(index);
-      console.log(status[key]);
-    
-      this.getProjectByStatus({'status': status[key]}, key);
+    Object.keys(list).map( (key, index) => {    
+      this.getProjectByStatus({'status': key});
     });
   }
 
-  getProjectByStatus = async (req, key) => {
+  getProjectByStatus = async (req) => {
     axios.post('/api/project/get-by-status', req)
     .then( res => {
       console.log(res);
       this.setState({
-        [key]: res.data.data,
-        [count[key]]: res.data.count
+        [list[req.status]]: res.data.data,
+        [count[req.status]]: res.data.count
       });
       this.updateTotalProject();
     });
   }
 
   addProject = async (req) => {
-    console.log(req);
     axios.post('/api/project/add', req)
     .then( res => {
 
     });
+  }
+
+  updateProject = async (req) => {
+    axios.put('/api/project/update', req)
+    .then( res => {
+
+    });
+  }
+
+  reorder = (list, startIndex, endIndex) => {
+    console.log('onDragEnd');
+    console.log('startIndex: ' + startIndex);
+    console.log('endIndex: ' + endIndex);
+    const result = Array.from(list);
+    console.log('result: ' + JSON.stringify(result));
+    const [removed] = result.splice(startIndex, 1);
+    console.log('result 1st splice: ' + JSON.stringify(result));
+    result.splice(endIndex, 0, removed);
+    console.log('result 2nd splice: ' + JSON.stringify(result));
   }
 
   updateTotalProject = async () => {
@@ -87,15 +102,72 @@ class TodoApp extends React.Component {
     };
 
     this.addProject(newItem);
-    this.getProjectByStatus({'status': status['toDoList']}, 'toDoList');
+    this.getProjectByStatus({'status': 'to_do'});
     this.setState(state => ({
       projectName: ''
     }));
   }
 
+  onDragEnd = (result) => {
+    console.log("onDragEnd");
+    console.log('result: ' + JSON.stringify(result));
+    const { source, destination } = result;
+    // dropped outside the list
+    if (!destination) {
+        return;
+    }
+
+    if (source.droppableId === destination.droppableId) {
+
+        console.log("same");
+    } else {
+        console.log("diff");
+
+        // const request = {
+        //   id: result.draggableId.split("-")[1],
+        //   status: destination.droppableId.replace("-","_"),
+        //   position: destination.index
+        // }
+
+        // console.log(request);
+        // this.updateProject(request);
+        this.move(source, destination);
+        
+        // this.fetchProjects();
+    }
+  };
+
+  move = (source, destination) => {
+      var sourceStatus = source.droppableId.replace("-","_");
+      var sourceList = Array.from(this.state[list[sourceStatus]]);
+      var sourcePos = source.index;
+      console.log('sourceList: ' + JSON.stringify(sourceList));
+      console.log('sourcePos: ' + JSON.stringify(sourcePos));
+
+
+      var desStatus = destination.droppableId.replace("-","_");
+      var desList = Array.from(this.state[list[desStatus]]);
+      var desPos = destination.index;
+      console.log('desList: ' + JSON.stringify(desList));
+      console.log('desPos: ' + JSON.stringify(desPos));
+
+
+
+      const [removed] = sourceList.splice(sourcePos, 1);
+      console.log('sourceList: ' + JSON.stringify(sourceList));
+      desList.splice(desPos, 0, removed);
+
+      this.setState({
+        [list[sourceStatus]]: sourceList,
+        [list[desStatus]]: desList,
+        [count[sourceStatus]]: this.state[count[sourceStatus]]-1,
+        [count[desStatus]]: this.state[[count[desStatus]]]+1,
+      });
+  }
+
   render() {
     return (
-      <div className="container-fluid">
+      <div className="container-fluid p-5">
         <div className="d-flex mb-3">
           <div className="me-auto p-2">
             <form className="row g-3" onSubmit={this.handleSubmit}>
@@ -111,6 +183,7 @@ class TodoApp extends React.Component {
                   placeholder="title"
                   onChange={this.handleChange}
                   value={this.state.projectName}
+                  autoFocus
                 />
               </div>
               <div className="col-auto">
@@ -120,24 +193,28 @@ class TodoApp extends React.Component {
               </div>
             </form>
           </div>
-          <div class="p-2">
-            <h3>{this.state.totalProjects}</h3>
+          <div class="d-flex flex-row p-2">
+            <h1>{this.state.totalProjects}</h1>
+            <h6>total</h6>
           </div>
         </div>
-        <div class="row">
-          <ProjectList 
-            items={this.state.toDoList} 
-            total={this.state.toDoCount} 
-            title='To Do' />
-          <ProjectList 
-            items={this.state.inProgressList}
-            total={this.state.inProgressCount}  
-            title='In Progress' />
-          <ProjectList 
-            items={this.state.doneList}
-            total={this.state.doneCount}  
-            title='Done' />
-        </div>
+        <DragDropContext
+          onDragEnd={this.onDragEnd}>
+          <div class="row">
+            <ProjectList 
+              items={this.state.toDoList} 
+              total={this.state.toDoCount} 
+              title='To Do' />
+            <ProjectList 
+              items={this.state.inProgressList}
+              total={this.state.inProgressCount}  
+              title='In Progress' />
+            <ProjectList 
+              items={this.state.doneList}
+              total={this.state.doneCount}  
+              title='Done' />
+          </div>
+        </DragDropContext>
       </div>
     );
   }
@@ -145,21 +222,42 @@ class TodoApp extends React.Component {
 
 class ProjectList extends React.Component {
   render() {
+    const type = this.props.title.toLowerCase().replace(" ","-");
     return (
       <div className="col-4">
-        <div className="card">
-          <div className="card-header">
-            <div className="d-flex">
-              <div className="me-auto p-2"><h3>{this.props.title}</h3></div>
-              <div className="p-2">{this.props.total}</div>
+        <Droppable 
+          droppableId={type}>
+          {(provided, snapshot) => (
+            <div
+              ref={provided.innerRef}
+              style={{ backgroundColor: snapshot.isDraggingOver ? 'blue' : 'grey' }}
+              {...provided.droppableProps}>
+              <div className="card">
+                <div className="card-header">
+                  <div className="d-flex">
+                    <div className="me-auto p-2"><h3>{this.props.title}</h3></div>
+                    <div className="p-2">{this.props.total}</div>
+                  </div>
+                </div>
+                <ul className="list-group list-group-flush">
+                  {this.props.items.map( (item, index) => (
+                    <Draggable draggableId={"draggable-" + item.id} key={item.id} index={item.position}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}>
+                          <li className="list-group-item" key={item.id}>{item.name}</li>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                </ul>
+              </div>
+              {provided.placeholder}
             </div>
-          </div>
-          <ul className="list-group list-group-flush">
-            {this.props.items.map(item => (
-              <li className="list-group-item" key={item.id}>{item.name}-{item.status}</li>
-            ))}
-          </ul>
-        </div>
+          )}
+        </Droppable>
       </div>
     );
   }
