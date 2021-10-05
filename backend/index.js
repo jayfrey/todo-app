@@ -50,7 +50,14 @@ app.post('/api/project/get-by-status', (req, res) => {
 
     db.all(sql, data, (err, rows) => {
         if (err) throw err;
-        res.send(rows);
+        var count = 0;
+        rows.forEach( (row) => {
+            count += 1;
+        })
+        res.send({
+            'data' : rows,
+            'count' : count
+        });
     });
 });
 
