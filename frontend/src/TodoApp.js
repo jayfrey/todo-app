@@ -208,14 +208,14 @@ class ProjectForm extends React.Component {
         <div className="me-auto p-2">
           <form className="row g-3" onSubmit={this.handleSubmit}>
             <div className="col-auto">
-              <label htmlFor="new-todo" className="form-control-plaintext">
+              <label htmlFor="new-project" className="form-control-plaintext">
                 Project Title
               </label>
             </div>
             <div className="col-auto">
               <input
                 className="form-control"
-                id="new-todo"
+                id="new-project"
                 placeholder="title"
                 onChange={this.handleChange}
                 value={this.props.projectTitle}
