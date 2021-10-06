@@ -2,7 +2,6 @@ import React from "react";
 import axios from 'axios';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
-
 const dict = {
   'to_do' : {
     'list' : 'toDoList',
@@ -29,7 +28,7 @@ class TodoApp extends React.Component {
       inProgressCount: 0,
       doneCount: 0,
       totalProjects: 0,
-      projectName: '' 
+      projectTitle: '' 
     };
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -42,7 +41,7 @@ class TodoApp extends React.Component {
 
   fetchProjects = () => {
 
-    Object.keys(list).map( (key, index) => {    
+    Object.keys(dict).map( (key, index) => {    
       this.getProjectByStatus({'status': key});
     });
   }
@@ -61,13 +60,19 @@ class TodoApp extends React.Component {
   addProject = (req) => {
     axios.post('/api/project/add', req)
     .then( res => {
+      this.getProjectByStatus({'status': 'to_do'});
+    });
+  }
 
+  updateTotalProject = () => {
+    this.setState({
+      totalProjects: this.state.toDoCount + this.state.inProgressCount + this.state.doneCount
     });
   }
 
   sort = (items, status) => {
     items.map( (item, index) => {
-      // if(item.position != index || item.status != status) {
+      if(item.position != index || item.status != status) {
         const req = {
           id: item.id,
           status: status,
@@ -77,23 +82,17 @@ class TodoApp extends React.Component {
         .then( res => {
 
         });
-      // }
+      }
     })
-  }
-
-  updateTotalProject = () => {
-    this.setState({
-      totalProjects: this.state.toDoCount + this.state.inProgressCount + this.state.doneCount
-    });
   }
 
   move = (source, destination) => {
     var sourceStatus = source.droppableId.replace("-","_");
-    var sourceList = Array.from(this.state[list[sourceStatus]]);
+    var sourceList = Array.from(this.state[dict[sourceStatus]["list"]]);
     var sourcePos = source.index;
 
     var desStatus = destination.droppableId.replace("-","_");
-    var desList = Array.from(this.state[list[desStatus]]);
+    var desList = Array.from(this.state[dict[desStatus]["list"]]);
     var desPos = destination.index;
 
     const [removed] = sourceList.splice(sourcePos, 1);
@@ -105,15 +104,15 @@ class TodoApp extends React.Component {
     this.setState({
       [dict[sourceStatus]["list"]]: sourceList,
       [dict[desStatus]["list"]]: desList,
-      [dict[sourceStatus]["count"]]: this.state[count[sourceStatus]]-1,
-      [dict[desStatus]["count"]]: this.state[[count[desStatus]]]+1,
+      [dict[sourceStatus]["count"]]: this.state[dict[sourceStatus]["count"]]-1,
+      [dict[desStatus]["count"]]: this.state[dict[desStatus]["count"]]+1,
     });
   }
 
   reorder = (source, destination) => {
     var sourcePos = source.index;
     var desStatus = destination.droppableId.replace("-","_");
-    var desList = Array.from(this.state[list[desStatus]]);
+    var desList = Array.from(this.state[dict[desStatus]["list"]]);
     var desPos = destination.index;
     const [removed] = desList.splice(sourcePos, 1);
     desList.splice(desPos, 0, removed);
@@ -122,27 +121,6 @@ class TodoApp extends React.Component {
     this.setState({
       [dict[desStatus]["list"]]: desList
     });
-  }
-
-  handleChange(e) {
-    this.setState({ projectName: e.target.value });
-  }
-
-  handleSubmit(e) {
-    e.preventDefault();
-    if (this.state.projectName.length === 0) {
-      return;
-    }
-    const newItem = {
-      name: this.state.projectName,
-      status: 'to_do'
-    };
-
-    this.addProject(newItem);
-    this.getProjectByStatus({'status': 'to_do'});
-    this.setState(state => ({
-      projectName: ''
-    }));
   }
 
   onDragEnd = (result) => {
@@ -159,41 +137,35 @@ class TodoApp extends React.Component {
     }
   };
 
+  handleChange(title) {
+    this.setState({ projectTitle: title });
+  }
+
+  handleSubmit() {
+    if (this.state.projectTitle.length === 0) {
+      return;
+    }
+    const newItem = {
+      name: this.state.projectTitle,
+      status: 'to_do'
+    };
+
+    this.addProject(newItem);
+    this.setState(state => ({
+      projectTitle: ''
+    }));
+  }
+
   render() {
     return (
-      <div className="container-fluid p-5">
-        <div className="d-flex mb-3">
-          <div className="me-auto p-2">
-            <form className="row g-3" onSubmit={this.handleSubmit}>
-              <div className="col-auto">
-                <label htmlFor="new-todo" className="form-control-plaintext">
-                  Project Title
-                </label>
-              </div>
-              <div className="col-auto">
-                <input
-                  className="form-control"
-                  id="new-todo"
-                  placeholder="title"
-                  onChange={this.handleChange}
-                  value={this.state.projectName}
-                  autoFocus
-                />
-              </div>
-              <div className="col-auto">
-                <button className="btn btn-outline-dark">
-                  Add Project
-                </button>
-              </div>
-            </form>
-          </div>
-          <div class="d-flex flex-row p-2">
-            <h1>{this.state.totalProjects}</h1>
-            <h6>total</h6>
-          </div>
-        </div>
-        <DragDropContext
+      <DragDropContext
           onDragEnd={this.onDragEnd}>
+        <div className="container-fluid p-5">
+          <ProjectForm
+            projectTitle={this.state.projectTitle}
+            totalProjects={this.state.totalProjects}
+            handleChange={this.handleChange}
+            handleSubmit={this.handleSubmit}/>
           <div class="row">
             <ProjectList 
               items={this.state.toDoList} 
@@ -208,7 +180,59 @@ class TodoApp extends React.Component {
               total={this.state.doneCount}  
               title='Done' />
           </div>
-        </DragDropContext>
+        </div>
+      </DragDropContext>
+    );
+  }
+}
+
+class ProjectForm extends React.Component {
+  constructor(props) {
+    super(props);
+    this.handleChange = this.handleChange.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  handleChange(e) {
+    this.props.handleChange(e.target.value);
+  }
+
+  handleSubmit(e) {
+    e.preventDefault();
+    this.props.handleSubmit();
+  }
+
+  render() {
+    return (
+      <div className="d-flex mb-3">
+        <div className="me-auto p-2">
+          <form className="row g-3" onSubmit={this.handleSubmit}>
+            <div className="col-auto">
+              <label htmlFor="new-todo" className="form-control-plaintext">
+                Project Title
+              </label>
+            </div>
+            <div className="col-auto">
+              <input
+                className="form-control"
+                id="new-todo"
+                placeholder="title"
+                onChange={this.handleChange}
+                value={this.props.projectTitle}
+                autoFocus
+              />
+            </div>
+            <div className="col-auto">
+              <button className="btn btn-outline-dark">
+                Add Project
+              </button>
+            </div>
+          </form>
+        </div>
+        <div class="d-flex flex-row p-2">
+          <h1>{this.props.totalProjects}</h1>
+          <h6>total</h6>
+        </div>
       </div>
     );
   }
@@ -219,19 +243,22 @@ class ProjectList extends React.Component {
     const type = this.props.title.toLowerCase().replace(" ","-");
     return (
       <div className="col-4">
-        <Droppable 
-          droppableId={type}>
-          {(provided, snapshot) => (
-            <div
-              ref={provided.innerRef}
-              {...provided.droppableProps}>
-              <div className="card">
-                <div className="card-header">
-                  <div className="d-flex">
-                    <div className="me-auto p-2"><h3>{this.props.title}</h3></div>
-                    <div className="p-2">{this.props.total}</div>
-                  </div>
-                </div>
+        <div className="card">
+
+          <div className="card-header">
+            <div className="d-flex">
+              <div className="me-auto p-2"><h3>{this.props.title}</h3></div>
+              <div className="p-2">{this.props.total}</div>
+            </div>
+          </div>
+
+          <Droppable 
+            droppableId={type}>
+            {(provided, snapshot) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}>
+
                 <ul className="list-group list-group-flush">
                   {this.props.items.map( (item, index) => (
                     <Draggable draggableId={"draggable-" + item.id} key={item.id} index={index}>
@@ -240,17 +267,21 @@ class ProjectList extends React.Component {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}>
+
                           <li className="list-group-item" key={item.id}>{item.name}</li>
+                        
                         </div>
                       )}
                     </Draggable>
                   ))}
                 </ul>
+
+                {provided.placeholder}
               </div>
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
+            )}
+          </Droppable>
+
+        </div>
       </div>
     );
   }

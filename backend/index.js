@@ -28,24 +28,19 @@ db.serialize(() => {
 
     let insertSql = "INSERT INTO projects (name, status, position) VALUES" +
                     "('Web App', 'to_do', 0)," +
-                    // "('Web App', 'to_do', 3)," +
-                    // "('Web App', 'to_do', 29)," +
-                    // "('Mobile App', 'in_progress', 0)," +
+                    "('Mobile App', 'in_progress', 0)," +
                     "('ML App', 'done', 0)";
 
     let selectSql = 'SELECT * FROM projects';
 
     db.run(createSql, (err, row) => {
         if (err) throw err;
-        console.log(row);
     });
     db.run(insertSql, (err, row) => {
         if (err) throw err;
-        console.log(row);
     });
     db.each(selectSql, (err, row) => {
         if (err) throw err;
-        console.log(row);
     });
 });
 
@@ -81,7 +76,7 @@ app.get('/api/project/all', (req, res) => {
 });
 
 app.post('/api/project/add', (req, res) => {
-    console.log(req.body);
+
     let queryLastOrderSql = "SELECT MAX(position) as position FROM projects WHERE status = 'to_do'";
     
     db.get(queryLastOrderSql, (err, row) => {
@@ -103,8 +98,6 @@ app.post('/api/project/add', (req, res) => {
 })
 
 app.put('/api/project/update', (req, res) => {
-
-    console.log(req.body);
 
     var data = [
         req.body.status,
