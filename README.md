@@ -36,7 +36,7 @@ cd ../backend/ && npm install
 ```
 #### Build Application
 ```sh
-cd npm run build && npm start
+npm run build && npm start
 ```
 ### Run Application
 Once it's done. Click [here](http://localhost:3001/) to open the application.
