@@ -34,4 +34,4 @@ cd backend/ && npm run build && npm start
 ```
 
 ### Run API with Postman
-Import the collection [here](https://github.com/jayfrey/moneylion-test/blob/dev/Take-Home-Test.postman_collection.json)
+Import the collection [here](https://github.com/jayfrey/todo-app/blob/main/Todo.postman_collection.json)
