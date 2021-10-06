@@ -32,6 +32,8 @@ cd todo-app
 
 cd backend/ && npm run build && npm start
 ```
+### Why Node.js & React? 
+Node.js is much prefeable for I/O intensive applications due to its asynchronous event loop, which enables CPU intensive tasks run in background without affecting main event loop. Hence, it would be a great addition for applications that grow over time. With combination of React, provides smoother transition experience between pages. I picked up these techs primarily because they have large community and rich libraries, and learning something new always drive me to go extra mile for the result.
 
 ### Run API with Postman
 Import the collection [here](https://github.com/jayfrey/todo-app/blob/main/Todo.postman_collection.json)
